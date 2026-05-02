@@ -1,0 +1,66 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "employee-app"
+        CONTAINER_NAME = "employee-container"
+        PORT = "3008"
+    }
+
+    stages {
+
+        stage('Clone Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/YOUR_USERNAME/YOUR_REPO.git'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${IMAGE_NAME} ."
+            }
+        }
+
+        stage('Remove Old Container') {
+            steps {
+                sh """
+                docker stop ${CONTAINER_NAME} || true
+                docker rm ${CONTAINER_NAME} || true
+                """
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                sh "docker run -d --name ${CONTAINER_NAME} -p ${PORT}:${PORT} ${IMAGE_NAME}"
+            }
+        }
+
+        stage('Test API') {
+            steps {
+                sh """
+                sleep 5
+                curl -X POST http://localhost:${PORT}/employee \
+                -H "Content-Type: application/json" \
+                -d '{"name":"DevOps","department":"IT","salary":10000}'
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment Successful"
+        }
+
+        failure {
+            echo "❌ Pipeline Failed"
+        }
+    }
+}
