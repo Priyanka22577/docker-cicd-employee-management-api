@@ -1,66 +1,47 @@
 pipeline {
     agent any
 
-    environment {
-        IMAGE_NAME = "employee-app"
-        CONTAINER_NAME = "employee-container"
-        PORT = "3008"
-    }
-
     stages {
 
-        stage('Clone Code') {
+        stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/YOUR_USERNAME/YOUR_REPO.git'
+                git 'YOUR_GITHUB_REPOSITORY_URL'
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Build Docker Images') {
             steps {
-                sh 'npm install'
+                sh 'docker compose build'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Stop Old Containers') {
             steps {
-                sh "docker build -t ${IMAGE_NAME} ."
+                sh 'docker compose down'
             }
         }
 
-        stage('Remove Old Container') {
+        stage('Run Containers') {
             steps {
-                sh """
-                docker stop ${CONTAINER_NAME} || true
-                docker rm ${CONTAINER_NAME} || true
-                """
+                sh 'docker compose up -d'
             }
         }
 
-        stage('Run Container') {
+        stage('Check Running Containers') {
             steps {
-                sh "docker run -d --name ${CONTAINER_NAME} -p ${PORT}:${PORT} ${IMAGE_NAME}"
+                sh 'docker ps'
             }
         }
 
-        stage('Test API') {
-            steps {
-                sh """
-                sleep 5
-                curl -X POST http://localhost:${PORT}/employee \
-                -H "Content-Type: application/json" \
-                -d '{"name":"DevOps","department":"IT","salary":10000}'
-                """
-            }
-        }
     }
 
     post {
         success {
-            echo "✅ Deployment Successful"
+            echo 'Pipeline executed successfully'
         }
 
         failure {
-            echo "❌ Pipeline Failed"
+            echo 'Pipeline failed'
         }
     }
 }
